@@ -16,7 +16,6 @@ GameObject:
   - component: {fileID: 7235129335114943816}
   - component: {fileID: 7235129335114943824}
   - component: {fileID: 7235129335114943831}
-  - component: {fileID: 7235129335114943830}
   m_Layer: 5
   m_Name: Canvas
   m_TagString: Untagged
@@ -182,28 +181,6 @@ MonoBehaviour:
   m_Name: 
   m_EditorClassIdentifier: 
   _screenContent: {fileID: 7235129336102522603}
---- !u!114 &7235129335114943830
-MonoBehaviour:
-  m_ObjectHideFlags: 0
-  m_CorrespondingSourceObject: {fileID: 0}
-  m_PrefabInstance: {fileID: 0}
-  m_PrefabAsset: {fileID: 0}
-  m_GameObject: {fileID: 7235129335114943823}
-  m_Enabled: 0
-  m_EditorHideFlags: 0
-  m_Script: {fileID: 11500000, guid: 749577985c36c6042bda355aa436ed8a, type: 3}
-  m_Name: 
-  m_EditorClassIdentifier: 
-  _roomNameInputField: {fileID: 7235129336582206329}
-  _errorText: {fileID: 7235129336921976925}
-  _roomNameText: {fileID: 7235129335787881298}
-  _roomListContent: {fileID: 0}
-  _roomListItemPrefab: {fileID: 1152353718710103414, guid: 0f291f77c7a62b546b815632a07222b2,
-    type: 3}
-  _playerListContent: {fileID: 0}
-  _playerListItemPrefab: {fileID: 8302933130004151887, guid: 66ea18d8086b42842b46db3e6abf8c3d,
-    type: 3}
-  _startGameButton: {fileID: 7235129336051500216}
 --- !u!1 &7235129336102522602
 GameObject:
   m_ObjectHideFlags: 0
@@ -844,18 +821,6 @@ RectTransform:
     type: 3}
   m_PrefabInstance: {fileID: 1770060350194887665}
   m_PrefabAsset: {fileID: 0}
---- !u!114 &7235129336582206329 stripped
-MonoBehaviour:
-  m_CorrespondingSourceObject: {fileID: 9005179791160367240, guid: 61b1a3437ca31f040ad8ccc59b7cbaac,
-    type: 3}
-  m_PrefabInstance: {fileID: 1770060350194887665}
-  m_PrefabAsset: {fileID: 0}
-  m_GameObject: {fileID: 0}
-  m_Enabled: 1
-  m_EditorHideFlags: 0
-  m_Script: {fileID: 11500000, guid: 2da0c512f12947e489f739169773d7ca, type: 3}
-  m_Name: 
-  m_EditorClassIdentifier: 
 --- !u!1001 &3886654919910171865
 PrefabInstance:
   m_ObjectHideFlags: 0

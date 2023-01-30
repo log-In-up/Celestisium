@@ -1,6 +1,5 @@
 using Photon.Pun;
-using System.Collections;
-using System.Collections.Generic;
+using Photon.Pun.UtilityScripts;
 using UnityEngine;
 using UnityEngine.UI;
 
@@ -10,7 +9,7 @@ namespace UserInterface
     {
         #region Editor fields
         [SerializeField] private Button _leaveRoom = null;
-        
+
         [SerializeField] private Button _startGame = null;
         #endregion
 
@@ -28,7 +27,7 @@ namespace UserInterface
         }
 
         public override void Deactivate()
-        {            
+        {
             _leaveRoom.onClick.RemoveListener(OnClickLeaveRoom);
             _startGame.onClick.RemoveListener(OnClickStartGame);
 
@@ -39,7 +38,11 @@ namespace UserInterface
         #region Event handlers
         private void OnClickLeaveRoom()
         {
-            PhotonNetwork.LeaveRoom();
+            if (PhotonNetwork.InRoom)
+            {
+                PhotonNetwork.LocalPlayer.LeaveCurrentTeam();
+                PhotonNetwork.LeaveRoom();
+            }
             UICore.OpenScreen(UIScreen.Loading);
         }
 

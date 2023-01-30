@@ -59,7 +59,7 @@ namespace UserInterface
             };
 
             PhotonNetwork.CreateRoom(_roomNameInputField.text, roomOptions);
-
+            
             UICore.OpenScreen(UIScreen.Loading);
         }
 

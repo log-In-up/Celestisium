@@ -1,3 +1,4 @@
+using GameNetworking;
 using Photon.Pun;
 using Photon.Realtime;
 using System.Collections.Generic;
@@ -98,8 +99,8 @@ public class Launcher : MonoBehaviourPunCallbacks
         {
             if (roomList[index].RemovedFromList) continue;
 
-            RoomListItem roomListItem = Instantiate(_roomListItemPrefab, _roomListContent).GetComponent<RoomListItem>();
-            roomListItem.SetUp(roomList[index]);
+            //RoomListItem roomListItem = Instantiate(_roomListItemPrefab, _roomListContent).GetComponent<RoomListItem>();
+            //roomListItem.SetUp(roomList[index]);
         }
     }
 

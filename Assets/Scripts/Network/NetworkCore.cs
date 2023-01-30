@@ -1,13 +1,11 @@
 using Photon.Pun;
+using Photon.Pun.UtilityScripts;
 using Photon.Realtime;
-using System;
 using System.Collections.Generic;
-using System.Linq;
 using TMPro;
 using UnityEngine;
 using UnityEngine.UI;
 using UserInterface;
-using Hashtable = ExitGames.Client.Photon.Hashtable;
 
 namespace GameNetworking
 {
@@ -38,16 +36,23 @@ namespace GameNetworking
 
         #region Fields
         private Player[] _players = null;
-        private Dictionary<string, Player[]> _teamsAndPlayers = null;
+        private PhotonTeamsManager _teamsManager = null;
 
-        private const string TEAM = "Team", SPECTATOR = "Spectator", RED_TEAM = "Red_team", BLUE_TEAM = "Blue_team";
+        private const byte SPECTATOR_TEAM = 0, BLUE_TEAM = 1, RED_TEAM = 2;
         #endregion
 
         #region MonoBehaviour API
+        private void Awake()
+        {
+            _teamsManager = PhotonTeamsManager.Instance;
+        }
+
         public override void OnEnable()
         {
             _joinBlueTeam.onClick.AddListener(OnClickJoinBlueTeam);
             _joinRedTeam.onClick.AddListener(OnClickJoinRedTeam);
+            PhotonTeamsManager.PlayerJoinedTeam += PlayerJoinedTeam;
+            PhotonTeamsManager.PlayerLeftTeam += PlayerLeftTeam;
 
             base.OnEnable();
         }
@@ -67,6 +72,8 @@ namespace GameNetworking
         {
             _joinBlueTeam.onClick.RemoveListener(OnClickJoinBlueTeam);
             _joinRedTeam.onClick.RemoveListener(OnClickJoinRedTeam);
+            PhotonTeamsManager.PlayerJoinedTeam -= PlayerJoinedTeam;
+            PhotonTeamsManager.PlayerLeftTeam -= PlayerLeftTeam;
 
             base.OnDisable();
         }
@@ -77,9 +84,6 @@ namespace GameNetworking
             PhotonNetwork.JoinLobby();
             PhotonNetwork.AutomaticallySyncScene = true;
 
-            Hashtable hashtable = new Hashtable() { { TEAM, SPECTATOR } };
-            PhotonNetwork.LocalPlayer.SetCustomProperties(hashtable);
-
 #if UNITY_EDITOR
             Debug.Log("Connected to Master. Joining the lobby...");
 #endif
@@ -87,10 +91,16 @@ namespace GameNetworking
 
         public override void OnJoinedLobby()
         {
+            PhotonNetwork.LocalPlayer.JoinTeam(SPECTATOR_TEAM);
             _uiCore.OpenScreen(UIScreen.Title);
 #if UNITY_EDITOR
             Debug.Log("Joined Lobby.");
 #endif
+        }
+
+        public override void OnMasterClientSwitched(Player newMasterClient)
+        {
+            _startGameButton.SetActive(PhotonNetwork.IsMasterClient);
         }
 
         public override void OnRoomListUpdate(List<RoomInfo> roomList)
@@ -105,59 +115,9 @@ namespace GameNetworking
                 if (roomList[index].RemovedFromList) continue;
 
                 RoomListItem roomListItem = Instantiate(_roomListItemPrefab, _roomListContent).GetComponent<RoomListItem>();
-                roomListItem.SetUp(roomList[index]);
+                roomListItem.SetUp(roomList[index], _uiCore);
             }
         }
-
-        #region Room callbacks
-        public override void OnJoinedRoom()
-        {
-            _roomName.text = PhotonNetwork.CurrentRoom.Name;
-
-            InitializePlayerLists();
-
-            UpdateTeamLists(_blueTeamListContent, BLUE_TEAM);
-            UpdateTeamLists(_redTeamListContent, RED_TEAM);
-            UpdateSpectators();
-
-            _startGameButton.SetActive(PhotonNetwork.IsMasterClient);
-            _uiCore.OpenScreen(UIScreen.Room);
-        }
-
-        public override void OnRoomPropertiesUpdate(Hashtable propertiesThatChanged)
-        {
-            UpdateTeamLists(_blueTeamListContent, BLUE_TEAM);
-            UpdateTeamLists(_redTeamListContent, RED_TEAM);
-            UpdateSpectators();
-        }
-
-        public override void OnPlayerEnteredRoom(Player newPlayer)
-        {
-            Hashtable hashtable = new Hashtable()
-            {
-                {TEAM, SPECTATOR}
-            };
-            newPlayer.SetCustomProperties(hashtable);
-
-            _players.ToList().Add(newPlayer);
-
-            _teamsAndPlayers[SPECTATOR].ToList().Add(newPlayer);
-        }
-
-        public override void OnPlayerLeftRoom(Player otherPlayer)
-        {
-            _players.ToList().Remove(otherPlayer);
-
-            string key = otherPlayer.CustomProperties[TEAM].ToString();
-
-            _teamsAndPlayers[key].ToList().Remove(otherPlayer);
-        }
-
-        public override void OnLeftRoom()
-        {
-            _uiCore.OpenScreen(UIScreen.Title);
-        }
-        #endregion
 
         public override void OnCreateRoomFailed(short returnCode, string message)
         {
@@ -171,57 +131,51 @@ namespace GameNetworking
             _uiCore.OpenScreen(UIScreen.Error);
         }
 
-        #region Methods
-        private void InitializePlayerLists()
+        #region Room callbacks
+        public override void OnJoinedRoom()
         {
-            _teamsAndPlayers = new Dictionary<string, Player[]>()
-            {
-                [SPECTATOR] = new Player[0],
-                [RED_TEAM] = new Player[0],
-                [BLUE_TEAM] = new Player[0]
-            };
             _players = PhotonNetwork.PlayerList;
 
-            foreach (Player player in _players)
-            {
-                string key = player.CustomProperties[TEAM].ToString();
-                _teamsAndPlayers[key].ToList().Add(player);
-            }
+            _roomName.text = PhotonNetwork.CurrentRoom.Name;
 
-            Hashtable currentRoomHashtable = new Hashtable()
-            {
-                {SPECTATOR, _teamsAndPlayers[SPECTATOR] },
-                {RED_TEAM, _teamsAndPlayers[RED_TEAM] },
-                {BLUE_TEAM, _teamsAndPlayers[BLUE_TEAM] }
-            };
+            UpdateSpectators();
+            UpdateListOfPlayers(BLUE_TEAM, _blueTeamListContent);
+            UpdateListOfPlayers(RED_TEAM, _redTeamListContent);
 
-            PhotonNetwork.CurrentRoom.SetCustomProperties(currentRoomHashtable);
+            _startGameButton.SetActive(PhotonNetwork.IsMasterClient);
+            _uiCore.OpenScreen(UIScreen.Room);
         }
 
-        private void UpdateTeamLists(Transform parentThatHoldsPlayers, string team)
+        public override void OnLeftRoom()
         {
-            foreach (Transform child in parentThatHoldsPlayers)
-            {
-                Destroy(child.gameObject);
-            }
-
-            for (int index = 0; index < _teamsAndPlayers[team].Length; index++)
-            {
-                PlayerListItem roomListItem = Instantiate(_playerListItemPrefab, parentThatHoldsPlayers).GetComponent<PlayerListItem>();
-                roomListItem.SetUp(_teamsAndPlayers[team][index]);
-            }
+            _uiCore.OpenScreen(UIScreen.Loading);
         }
 
+        public override void OnPlayerEnteredRoom(Player newPlayer)
+        {
+            newPlayer.JoinTeam(SPECTATOR_TEAM);
+            UpdateSpectators();
+
+            _players.AddToArray(newPlayer);
+        }
+
+        public override void OnPlayerLeftRoom(Player otherPlayer)
+        {
+            otherPlayer.LeaveCurrentTeam();
+            _players.RemoveFromArray(otherPlayer);
+        }
+        #endregion
+
+        #region Methods
         private void UpdateSpectators()
         {
+            _teamsManager.TryGetTeamMembers(SPECTATOR_TEAM, out Player[] members);
+
             List<string> spectators = new List<string>();
 
-            for (int index = 0; index < _players.Length; index++)
+            for (int index = 0; index < members.Length; index++)
             {
-                if (_players[index].CustomProperties[TEAM].Equals(SPECTATOR))
-                {
-                    spectators.Add(_players[index].NickName);
-                }
+                spectators.Add(members[index].NickName);
             }
 
             spectators.Sort();
@@ -229,52 +183,50 @@ namespace GameNetworking
             _spectators.text = string.Join(", ", spectators);
         }
 
+        private void UpdateListOfPlayers(byte code, Transform parent)
+        {
+            _teamsManager.TryGetTeamMembers(code, out Player[] members);
+
+            foreach (Transform child in parent)
+            {
+                Destroy(child.gameObject);
+            }
+
+            foreach (Player teamMate in members)
+            {
+                PlayerListItem roomListItem = Instantiate(_playerListItemPrefab, parent).GetComponent<PlayerListItem>();
+                roomListItem.SetUp(teamMate);
+            }
+        }
+        #endregion
+
+        #region Event handlers        
         private void OnClickJoinBlueTeam()
         {
-            Hashtable hashtable = new Hashtable() { { TEAM, BLUE_TEAM } };
-            PhotonNetwork.LocalPlayer.SetCustomProperties(hashtable);
+            if (!_teamsManager.TryGetTeamByCode(BLUE_TEAM, out PhotonTeam blueTeam)) return;
 
-            if (!_teamsAndPlayers[BLUE_TEAM].Contains(PhotonNetwork.LocalPlayer))
-            {
-                _teamsAndPlayers[BLUE_TEAM] = _teamsAndPlayers[BLUE_TEAM].AddToArray(PhotonNetwork.LocalPlayer);
-            }
-            if (_teamsAndPlayers[RED_TEAM].Contains(PhotonNetwork.LocalPlayer))
-            {
-                _teamsAndPlayers[RED_TEAM] = _teamsAndPlayers[RED_TEAM].RemoveFromArray(PhotonNetwork.LocalPlayer);
-            }
-
-            Hashtable currentRoomHashtable = new Hashtable()
-            {
-                {SPECTATOR, _teamsAndPlayers[SPECTATOR] },
-                {RED_TEAM, _teamsAndPlayers[RED_TEAM] },
-                {BLUE_TEAM, _teamsAndPlayers[BLUE_TEAM] }
-            };
-
-            PhotonNetwork.CurrentRoom.SetCustomProperties(currentRoomHashtable);
+            PhotonNetwork.LocalPlayer.SwitchTeam(blueTeam);
         }
 
         private void OnClickJoinRedTeam()
         {
-            Hashtable hashtable = new Hashtable() { { TEAM, RED_TEAM } };
-            PhotonNetwork.LocalPlayer.SetCustomProperties(hashtable);
+            if (!_teamsManager.TryGetTeamByCode(RED_TEAM, out PhotonTeam redTeam)) return;
 
-            if (!_teamsAndPlayers[RED_TEAM].Contains(PhotonNetwork.LocalPlayer))
-            {
-                _teamsAndPlayers[RED_TEAM] = _teamsAndPlayers[RED_TEAM].AddToArray(PhotonNetwork.LocalPlayer);
-            }
-            if (_teamsAndPlayers[BLUE_TEAM].Contains(PhotonNetwork.LocalPlayer))
-            {
-                _teamsAndPlayers[BLUE_TEAM] = _teamsAndPlayers[BLUE_TEAM].RemoveFromArray(PhotonNetwork.LocalPlayer);
-            }
+            PhotonNetwork.LocalPlayer.SwitchTeam(redTeam);
+        }
 
-            Hashtable currentRoomHashtable = new Hashtable()
-            {
-                {SPECTATOR, _teamsAndPlayers[SPECTATOR] },
-                {RED_TEAM, _teamsAndPlayers[RED_TEAM] },
-                {BLUE_TEAM, _teamsAndPlayers[BLUE_TEAM] }
-            };
+        private void PlayerLeftTeam(Player player, PhotonTeam team)
+        {
+            UpdateSpectators();
+            UpdateListOfPlayers(BLUE_TEAM, _blueTeamListContent);
+            UpdateListOfPlayers(RED_TEAM, _redTeamListContent);
+        }
 
-            PhotonNetwork.CurrentRoom.SetCustomProperties(currentRoomHashtable);
+        private void PlayerJoinedTeam(Player player, PhotonTeam team)
+        {
+            UpdateSpectators();
+            UpdateListOfPlayers(BLUE_TEAM, _blueTeamListContent);
+            UpdateListOfPlayers(RED_TEAM, _redTeamListContent);
         }
         #endregion
     }
