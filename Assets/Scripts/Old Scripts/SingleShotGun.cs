@@ -1,4 +1,6 @@
 using Photon.Pun;
+using Photon.Realtime;
+using System.Collections.Generic;
 using UnityEngine;
 
 [DisallowMultipleComponent]
@@ -14,21 +16,37 @@ public class SingleShotGun : Gun
         _photonView = GetComponent<PhotonView>();
     }
 
-    public override void Use()
+    public override void Use() { }
+
+    public override void Use(Player[] teammates)
     {
-        Shoot();
+        Shoot(teammates);
     }
 
-    private void Shoot()
+    private void Shoot(Player[] teammates)
     {
         Ray ray = _camera.ViewportPointToRay(new Vector3(0.5f, 0.5f));
         ray.origin = _camera.transform.position;
 
         if (Physics.Raycast(ray, out RaycastHit hitInfo))
         {
-            if (hitInfo.collider.TryGetComponent(out IDamageable damageable))
+            float damage = ((GunInfo)ItemInfo).Damage;
+
+            List<Player> players = new List<Player>(teammates);
+
+            if (hitInfo.collider.TryGetComponent(out PhotonView photonView))
             {
-                damageable.TakeDamage(((GunInfo)ItemInfo).Damage);
+                if (!players.Contains(photonView.Owner) & hitInfo.collider.TryGetComponent(out IDamageable damageable))
+                {
+                    damageable.TakeDamage(damage);
+                }
+            }
+            else
+            {
+                if (hitInfo.collider.TryGetComponent(out IDamageable damageable))
+                {
+                    damageable.TakeDamage(damage);
+                }
             }
             _photonView.RPC("RPC_Shoot", RpcTarget.All, hitInfo.point, hitInfo.normal);
         }

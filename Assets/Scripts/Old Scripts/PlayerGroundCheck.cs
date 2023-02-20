@@ -1,51 +1,54 @@
 using UnityEngine;
 
-[DisallowMultipleComponent]
-public class PlayerGroundCheck : MonoBehaviour
+namespace Players
 {
-    private PlayerController _playerController = null;
-
-    private void Awake() => _playerController = GetComponentInParent<PlayerController>();
-
-    private void OnTriggerEnter(Collider other)
+    [DisallowMultipleComponent]
+    public class PlayerGroundCheck : MonoBehaviour
     {
-        if (other.gameObject == _playerController.gameObject) return;
+        private PlayerController _playerController = null;
 
-        _playerController.SetGroundedState(true);
-    }
+        private void Awake() => _playerController = GetComponentInParent<PlayerController>();
 
-    private void OnTriggerExit(Collider other)
-    {
-        if (other.gameObject == _playerController.gameObject) return;
+        private void OnTriggerEnter(Collider other)
+        {
+            if (other.gameObject == _playerController.gameObject) return;
 
-        _playerController.SetGroundedState(false);
-    }
+            _playerController.SetGroundedState(true);
+        }
 
-    private void OnTriggerStay(Collider other)
-    {
-        if (other.gameObject == _playerController.gameObject) return;
+        private void OnTriggerExit(Collider other)
+        {
+            if (other.gameObject == _playerController.gameObject) return;
 
-        _playerController.SetGroundedState(true);
-    }
+            _playerController.SetGroundedState(false);
+        }
 
-    private void OnCollisionEnter(Collision collision)
-    {
-        if (collision.gameObject == _playerController.gameObject) return;
+        private void OnTriggerStay(Collider other)
+        {
+            if (other.gameObject == _playerController.gameObject) return;
 
-        _playerController.SetGroundedState(true);
-    }
+            _playerController.SetGroundedState(true);
+        }
 
-    private void OnCollisionExit(Collision collision) 
-    {
-        if (collision.gameObject == _playerController.gameObject) return;
+        private void OnCollisionEnter(Collision collision)
+        {
+            if (collision.gameObject == _playerController.gameObject) return;
 
-        _playerController.SetGroundedState(false);
-    }
+            _playerController.SetGroundedState(true);
+        }
 
-    private void OnCollisionStay(Collision collision)
-    {
-        if (collision.gameObject == _playerController.gameObject) return;
+        private void OnCollisionExit(Collision collision)
+        {
+            if (collision.gameObject == _playerController.gameObject) return;
 
-        _playerController.SetGroundedState(true);
+            _playerController.SetGroundedState(false);
+        }
+
+        private void OnCollisionStay(Collision collision)
+        {
+            if (collision.gameObject == _playerController.gameObject) return;
+
+            _playerController.SetGroundedState(true);
+        }
     }
 }
