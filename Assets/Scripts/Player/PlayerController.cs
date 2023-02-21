@@ -10,12 +10,15 @@ namespace Players
     [DisallowMultipleComponent]
     public class PlayerController : MonoBehaviourPunCallbacks, IDamageable
     {
+        #region Editor fields
         [SerializeField] private Slider _healthBar = null;
         [SerializeField] private GameObject _cameraHolder = null, _ui = null;
         [SerializeField, Min(0.0f)] private float _mouseSensitivity = 3.0f, _smoothTime = 0.15f, _sprintSpeed = 6.0f, _walkSpeed = 3.0f, _jumpForce = 300.0f;
         [SerializeField] private Gun[] _weapons = null;
+        #endregion
 
-        private bool _grounded;
+        #region Fields
+        private bool _grounded, _isInMenu;
         private float _verticalLookrotation, _currentHealth;
         private int _itemIndex, _previousItemIndex = -1;
         private Vector3 _smoothMoveVelocity, _moveAmount;
@@ -31,12 +34,19 @@ namespace Players
             MOUSE_SCROLLWHEEL_NAME = "Mouse ScrollWheel", ITEM_INDEX_KEY = "_itemIndex";
 
         private const float VERTICAL_MIN = -90.0f, VERTICAL_MAX = 90.0f, MAX_HEALTH = 100.0f;
+        #endregion
+
+        #region Properties
+        public bool IsInMenu { get => _isInMenu; set => _isInMenu = value; }
+        #endregion
 
         #region MonoBehaviour API
         private void Awake()
         {
             _rigidbody = GetComponent<Rigidbody>();
             _photonView = GetComponent<PhotonView>();
+
+            _isInMenu = false;
 
             int viewID = (int)_photonView.InstantiationData[0];
             _playerManager = PhotonView.Find(viewID).GetComponent<PlayerManager>();
@@ -50,7 +60,7 @@ namespace Players
             {
                 ResetPlayerStats();
 
-                if(_teamsManager.TryGetTeamMatesOfPlayer(PhotonNetwork.LocalPlayer, out Player[] teammates))
+                if (_teamsManager.TryGetTeamMatesOfPlayer(PhotonNetwork.LocalPlayer, out Player[] teammates))
                 {
                     _playerTeammates = teammates;
                 }
@@ -66,6 +76,7 @@ namespace Players
         private void Update()
         {
             if (!_photonView.IsMine) return;
+            if (_isInMenu) return;
 
             Look();
             Move();
@@ -78,6 +89,7 @@ namespace Players
         private void FixedUpdate()
         {
             if (!_photonView.IsMine) return;
+            if (_isInMenu) return;
 
             _rigidbody.MovePosition(_rigidbody.position + (transform.TransformDirection(_moveAmount) * Time.fixedDeltaTime));
         }
@@ -193,6 +205,7 @@ namespace Players
             if (_currentHealth <= 0.0f)
             {
                 Die();
+                PlayerManager.Find(photonMessageInfo.Sender).GetKill();
             }
         }
         #endregion

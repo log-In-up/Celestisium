@@ -9,7 +9,7 @@ namespace Players
 {
     [DisallowMultipleComponent]
     [RequireComponent(typeof(PhotonView))]
-    public sealed class PlayerManager : MonoBehaviour
+    public sealed class PlayerManager : MonoBehaviourPunCallbacks
     {
         private PhotonView _photonView = null;
         private PlayerController _controller = null;        

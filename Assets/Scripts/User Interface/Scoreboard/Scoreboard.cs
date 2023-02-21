@@ -6,15 +6,29 @@ using UnityEngine;
 [DisallowMultipleComponent]
 public class Scoreboard : MonoBehaviourPunCallbacks
 {
+    #region Editor fields
     [SerializeField] private Transform _container = null;
     [SerializeField] private GameObject _scoreboardItemPrefab = null;
+    #endregion
 
+    #region Fields
+    private bool _scoreboardCanBeOpened;
     private Dictionary<Player, ScoreboardItem> _scoreboardItems = null;
+    #endregion
+
+    #region Properties
+    public bool ScoreboardCanBeOpened { get => _scoreboardCanBeOpened; set => _scoreboardCanBeOpened = value; }
+    #endregion
+
+    #region MonoBehaviour API
+    private void Awake()
+    {
+        _scoreboardItems = new Dictionary<Player, ScoreboardItem>();
+        _scoreboardCanBeOpened = true;
+    }
 
     private void Start()
     {
-        _scoreboardItems = new Dictionary<Player, ScoreboardItem>();
-
         foreach (Player player in PhotonNetwork.PlayerList)
         {
             AddScoreboardItem(player);
@@ -23,6 +37,16 @@ public class Scoreboard : MonoBehaviourPunCallbacks
 
     private void Update()
     {
+        if (!_scoreboardCanBeOpened)
+        {
+            if (Input.GetKeyUp(KeyCode.Tab))
+            {
+                _container.gameObject.SetActive(false);
+            }
+
+            return;
+        }
+
         if (Input.GetKeyDown(KeyCode.Tab))
         {
             _container.gameObject.SetActive(true);
@@ -32,7 +56,21 @@ public class Scoreboard : MonoBehaviourPunCallbacks
             _container.gameObject.SetActive(false);
         }
     }
+    #endregion
 
+    #region PunCallbacks
+    public override void OnPlayerEnteredRoom(Player newPlayer)
+    {
+        AddScoreboardItem(newPlayer);
+    }
+
+    public override void OnPlayerLeftRoom(Player otherPlayer)
+    {
+        RemoveScoreboardItem(otherPlayer);
+    }
+    #endregion
+
+    #region Methods
     private void AddScoreboardItem(Player player)
     {
         ScoreboardItem item = Instantiate(_scoreboardItemPrefab, _container).GetComponent<ScoreboardItem>();
@@ -45,14 +83,5 @@ public class Scoreboard : MonoBehaviourPunCallbacks
         Destroy(_scoreboardItems[player].gameObject);
         _scoreboardItems.Remove(player);
     }
-
-    public override void OnPlayerEnteredRoom(Player newPlayer)
-    {
-        AddScoreboardItem(newPlayer);
-    }
-
-    public override void OnPlayerLeftRoom(Player otherPlayer)
-    {
-        RemoveScoreboardItem(otherPlayer);
-    }
+    #endregion    
 }
